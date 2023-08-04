@@ -17,6 +17,7 @@ spec:
       labels:
         app: valcon
     spec:
+      serviceAccount: valcon-sa
       containers:
       - image: rakshitgondwal/valcontroller:0.1.1
         name: valcontroller

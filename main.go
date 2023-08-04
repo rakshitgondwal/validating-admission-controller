@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -8,13 +9,14 @@ import (
 	"time"
 
 	"github.com/spf13/pflag"
+	admv1 "k8s.io/api/admission/v1beta1"
 	appv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apiserver/pkg/server"
 	"k8s.io/apiserver/pkg/server/options"
 	"k8s.io/component-base/cli/globalflag"
-	admv1 "k8s.io/api/admission/v1beta1"
 )
 
 type Options struct {
@@ -106,4 +108,42 @@ func DeploymentValdiation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Printf("deployment resource that we have is %+v\n", d)
+
+	var response admv1.AdmissionResponse
+
+	allow := validateDeployment(d.Spec.Replicas)
+	if !allow {
+		response = admv1.AdmissionResponse{
+			UID:     admissionReview.Request.UID,
+			Allowed: allow,
+			Result: &v1.Status{
+				Message: fmt.Sprintf("The number %d of replicas is not 3.", &d.Spec.Replicas),
+			},
+		}
+	} else {
+		response = admv1.AdmissionResponse{
+			UID:     admissionReview.Request.UID,
+			Allowed: allow,
+		}
+	}
+
+	admissionReview.Response = &response
+
+	fmt.Print(response)
+	res, err := json.Marshal(admissionReview)
+	if err != nil {
+		fmt.Printf("error %s, while converting response to byte slice", err.Error())
+	}
+
+	_, err = w.Write(res)
+	if err != nil {
+		fmt.Printf("error %s, writing response to responsewriter", err.Error())
+	}
+}
+
+func validateDeployment(r *int32) bool {
+	if *r != int32(3) {
+		return false
+	}
+	return true
 }
