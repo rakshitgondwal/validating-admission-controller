@@ -18,7 +18,7 @@ spec:
         app: valcon
     spec:
       containers:
-      - image: rakshitgondwal/valcontroller:0.1.0
+      - image: rakshitgondwal/valcontroller:0.1.1
         name: valcontroller
         args:
           - --tls-cert-file=/var/run/webhook/serving-cert/tls.cert
